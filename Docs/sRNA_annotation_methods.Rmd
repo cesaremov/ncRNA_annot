@@ -34,7 +34,7 @@ miRDeep2
 . R packages
 gplots
 rtracklayer
-GenomiFeatures
+GenomicFeatures
 
 . Databases
 Rfam
@@ -44,9 +44,9 @@ Dfam
 
 ## Homology annotation
 
-sRNA_annotaiton pipeline first identifies sRNA producing loci based on homology.
+sRNA_annotation pipeline first identifies sRNA-producing loci based on homology.
 
-To run homology annotation, you must type (C. elegans sRNA producing loci annotation example):
+To run homology annotation, you must type the following (C. elegans sRNA producing loci annotation example):
 
 ```{bash, eval=FALSE}
 00.Homology.sh -g genome/caenorhabditis_elegans.PRJNA13758.WBPS7.genomic.fa -b ce -m 10000000 -r ~/Work/db/Rfam/Rfam.cm -M mature.fa --mapmiPath ~/programi/MapMi/SourceRelease --mode local
