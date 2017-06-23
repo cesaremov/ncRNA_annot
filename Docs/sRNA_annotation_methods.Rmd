@@ -1,0 +1,241 @@
+---
+title: "sRNA_annotation"
+author: "Cesaré Ovando-Vázquez"
+date: "21/6/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Requierments
+
+. Homology software packages
+splitMfasta.pl http://augustus.gobics.de/binaries/scripts/splitMfasta.pl
+HMMER 3.1b2
+Infernal 1.1.1 (cmsearch)
+tRNAscan-SE 1.3.1
+RNAmmer 1.2 
+MapMi
+blast
+dust3
+RNA.pm
+
+. sRNAseq quantification software packages
+FastQC
+MultiQC
+Reaper
+Tally
+Pullseq (set minimum and max read length)
+ShorStack v3.4
+miRDeep2
+
+. R packages
+gplots
+rtracklayer
+GenomiFeatures
+
+. Databases
+Rfam
+Dfam
+
+
+
+## Homology annotation
+
+sRNA_annotaiton pipeline first identifies sRNA producing loci based on homology.
+
+To run homology annotation, you must type (C. elegans sRNA producing loci annotation example):
+
+```{bash, eval=FALSE}
+00.Homology.sh -g genome/caenorhabditis_elegans.PRJNA13758.WBPS7.genomic.fa -b ce -m 10000000 -r ~/Work/db/Rfam/Rfam.cm -M mature.fa --mapmiPath ~/programi/MapMi/SourceRelease --mode local
+```
+
+00.Homology.sh looks for a directory called genome. In this genome diretory must be allocated the genome of interes in fasta format (e.g. caenorhabditis_elegans.PRJNA13758.WBPS7.genomic.fa, http://parasite.wormbase.org/ftp.html). 
+
+00.Homology.sh runs a list of homology annotation tools in a local or cluster process mode (cluster mode loads specific modules, see Requirements Homology software packages).
+
+**0. Processing genome**
+
+00.Homology.sh process the genome calling 00.procGenome.sh
+
+```{bash, eval=FALSE}
+00.procGenome.sh -g genome/caenorhabditis_elegans.PRJNA13758.WBPS7.genomic.fa -b ce -m local
+```
+00.procGenome.sh uses bowtie-build to generate genome index and bowtie-inspect to get chromosome/scaffold/contig lengths. -g sets the path to the genome fasta file. -b sets a basename. -m sets processing mode.  
+
+**1. Split genome**
+
+00.Homology.sh splits the genome fasta file into several smaller fasta files calling 01.slit_genome.sh. Spliting genome fasta file reduces system requirements, specially if processing in cluster mode.
+
+```{bash, eval=FALSE}
+01.split_genome.sh -b ce -m 10000000 --mode local
+```
+01.split_genome.sh uses splitMfasta.pl to split genome fasta file. -m sets the genome basename. -m sets the minimum number of nucleotides (ACGT characters) per splited genome fasta file. No chromosome/scafold/contig break down. --mode sets processing mode.
+
+**2. Rfam**
+
+00.Homology.sh looks for dentifies ncRNA producing loci using Rfam covariance models calling 02.cmsearch_Rfam.sh.
+
+```{bash, eval=FALSE}
+02.cmsearch_Rfam.sh -r ~/Work/db/Rfam/Rfam.cm -m local
+```
+02.cmsearch_Rfam.sh uses cmsearch with --rfam and --tblout arguments. -r sets the path to rfam. -m sets processing mode.
+
+**3. tRNAscan-SE**
+
+00.Homology.sh identifies tRNA producing loci calling 03.tRNAscan.sh
+
+```{bash, eval=FALSE}
+03.tRNAscan.sh -m local
+```
+03.tRNAscan.sh no needs special arguments. -m sets processing mode.
+
+**4. RNAmmer**
+
+00.Homology identifies rRNA procuding loci calling 04.RNAmmer.sh
+*Installation issues. Intall to ~/bin*
+```{bash, eval=FALSE}
+04.RNAmmer.sh -m local
+```
+04.RNAmmer.sh uses -S euk, -multi -m tsu,lsu,ssu arguments. -m sets processing mode.
+
+**5. MapMi**
+
+00.Homology.sh identifies microRNA producing loci calling 05.MapMi.sh
+
+```{bash, eval=FALSE}
+05.MapMi.sh -b ce --mapmiPath ~/programi/MapMi/SourceRelease -M mature.fa -m local
+```
+05.MapMi.sh no needs special arguments. -b sets the genome basename. --mapmiPath sets path to MapMi folder. -M sets path to mature microRNA fasta file http://www.mirbase.org/ftp.shtml. -m sets processing mode.
+
+**6. RepeatMasker (Dfam)**
+
+00.Homology.sh identifies repetitive DNA elements calling 07.RepeatMasker.sh
+
+```{bash, eval=FALSE}
+07.RepeatMasker.sh -m local
+```
+07.RepeatMasker.sh uses -species elegans argument. You must update Dfam file before installing RepeatMasker. -m sets processing mode.
+
+
+## sRNAseq quantification annotation
+
+When genome fasta file is processed, sRNA_annotaiton pipeline identifies loci based on sRNAseq quantification.
+
+To run sRNAseq annotation, you must type (C. elegans sRNA producing loci annotation example):
+
+```{bash, eval=FALSE}
+00.sRNAseq.sh -b ce --fastqPath cel_files_rename -M mature.fa -a TGGAATTCTCGGGTGCCAAGG -t GTTCAGAGTTCTACAGTCCGACGATC -l 18 -u 32 --dicermin 18 --dicermax 32 --mincov 10 --pad 10 --mode local
+```
+
+00.sRNAseq.sh looks for a directory containing sRNAseq fastq files. -b sets the genome basename. --fastqPath sets the path to sRNAseq fastq files. -M sets the path to mature microRNA fasta file. -a sets 3' adapter. -t sets 5' adapter. -l sets the lower sRNAseq read length to consider. -u sets the upper sRNAseq read length to consider. --dicermin sets the minimum dicer processing length. --dicermas sets the maximum dicer processing length. --mincov sets the minimum coverage. --pad sets the maximum distance to pad sRNA producing clusters (loci). --mode sets processing mode.
+
+00.sRNAseq.sh runs a list of sRNAseq quantification annotation tools in a local or cluster processing mode (cluster mode loads specific modules, see Requirements sRNAseq quantification software packages).
+
+
+**1. Links to files (no dots in linknames)**
+
+00.sRNAseq.sh calls 01.rename_link_files.sh to create links to sRNAseq fastq files. Linknames without dots (ShortStack, miRDeep2 issues with dots in filenames).
+
+```{bash, eval=FALSE}
+01.rename_link_files.sh -i cel_files_rename
+```
+
+**2. FastQC quality analysis**
+
+00.sRNAseq.sh analyze fastq files quality calling 02.fastqc.sh -m $mode
+
+```{bash, eval=FALSE}
+02.fastqc.sh -m local
+```
+02.fastqc.sh uses FastQC to analyze fastq files and create quality reports. -m sets processing mode.
+
+
+**3. Reaper reads**
+
+00.sRNAseq.sh removes adapters calling 03.reaper.sh
+
+```{bash, eval=FALSE}
+03.reaper.sh -a TGGAATTCTCGGGTGCCAAGG -t GTTCAGAGTTCTACAGTCCGACGATC -m local
+```
+03.reaper.sh uses reaper (http://www.ebi.ac.uk/research/enright/software/kraken) to cut 5' and 3' adapters. -a sets the 3' adapter. -t sets 5' adapter. -m sets processing mode. 
+
+
+**4. Tally reads**
+
+00.sRNAseq.sh deduplicates sequence fagments calling 04.tally.sh
+
+```{bash, eval=FALSE}
+04.tally.sh -l 18 -u 32 -m local
+```
+04.tally.sh uses tally (http://www.ebi.ac.uk/research/enright/software/kraken) depulicating and selecting a sequence length ragne to report. -l sets the minimum sequence length. -u sets the maximum sequence length. -m sets processing mode.
+
+
+**5. Filter out reads by length**
+
+00.sRNAseq.sh filters out sequences by length calling 05.pullseq.sh
+
+```{bash, eval=FALSE}
+05.pullseq.sh -l 18 -u 32 -m mode
+```
+05.pullseq.sh uses pullseq to keep sequences in a desired length range. -l sets the miminum sequence length. -u sets the maximum sequence length.
+
+
+**6. 00. Align to genome (ShortStack bowtie alignment)**
+
+00.sRNAseq.sh aligns reads to genome calling 06.00.bowtie_ShortStack.sh
+
+```{bash, eval=FALSE}
+06.00.bowtie_ShortStack.sh -b ce -m local
+``` 
+06.00.bowtie_ShortStack.sh uses ShortStack only alignment mode (first uses bowtie, then a perl script to process multi-alignment results). -b sets the genome basename. -m sets processing mode.
+
+
+**6. 01. Filter out bowtie results**
+
+00.sRNAseq.sh filters out alignments with score equal to zero (XZ:f:0).
+
+```{bash, eval=FALSE}
+06.01.filter_bowtie.sh -m local
+```
+06.01.filter_bowtie.sh uses samtools view and grep commands to filter out irrelevant reads. -m sets processing mode.
+
+**6. 02. Gather filtered bowtie results**
+
+00.sRNAseq.sh gather all alignment files into one alignment file.
+
+```{bash, eval=FALSE}
+06.02.gatherAllBam.sh -m local
+```
+06.02.gatherAllBam.sh uses samtools merge to gather bam files, samtools view to filter out unaligned reads, and samtools index to create bai index. -m sets processing mode.
+
+**6. 03. ShortStack analysis**
+
+00.sRNAseq.sh annotates sRNA producing loci calling 06.03.ShortStack.sh
+
+```{bash, eval=FALSE}
+06.03.shorstack.sh -b ce --dicermin 18 --dicermax 32 --mincov 10 --pad 10 -m local
+```
+06.03.ShortStack.sh uses ShortStack to annotate sRNA producing loci quantifying sRNAseq data. -b sets the genome basename. --dicermin sets the minimum Dicer processing length. --dicermax sets the maximum Dicer processing length. --mincov sets the minimum coverage. --pad sets the maximum distance to pad sRNA producing clusters (loci). -m sets processing mode.  
+
+
+**7. miRDeep2 analysis**
+
+00.SRNAseq.sh annotates microRNA producing loci calling 07.miRDeep2.sh
+
+```{bash, eval=FALSE}
+07.miRDeep2.sh -b ce -M mature.fa --mincov 10 -m local
+```
+
+07.miRDeep2.sh uses miRDeep2 and mature microRNA info. -b sets genome basename. -M sets path to mature microRNA fasta file http://www.mirbase.org/ftp.shtml. --mincov sets the minimum coverage. -m sets processing mode.
+
+
+
+
+
+
+
+
+
