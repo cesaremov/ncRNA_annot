@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(DiagrammeR)
 ```
 
 ## Requierments
@@ -232,7 +233,20 @@ To run sRNAseq annotation, you must type (C. elegans sRNA producing loci annotat
 07.miRDeep2.sh uses miRDeep2 and mature microRNA info. -b sets genome basename. -M sets path to mature microRNA fasta file http://www.mirbase.org/ftp.shtml. --mincov sets the minimum coverage. -m sets processing mode.
 
 
-
+```{R}
+# Example of sequence diagram
+mermaid("
+sequenceDiagram
+Alice->>Bob: Hello Bob, how are you?
+alt is sick
+Bob->>Alice: Not so good :(
+else is well
+Bob->>Alice: Feeling fresh like a daisy
+end
+opt Extra response
+Bob->>Alice: Thanks for asking
+end")
+```
 
 
 

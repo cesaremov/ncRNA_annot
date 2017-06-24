@@ -60,7 +60,7 @@ mem="20G"
 
 # BowtieShorStack options
 k="500"
-ShortStackLine="ShortStack --bowtie_cores $ppn --nostitch --mismatches 2 --mmap u --bowtie_m $k --ranmax $k"
+ShortStackLine="ShortStack --bowtie_cores $ppn --nostitch --mismatches 2 --mmap u --bowtie_m $k --ranmax $k --show_secondaries"
 
 # Genome info
 idxFile="$genome/$base"
@@ -83,7 +83,7 @@ for fqFile in $inFiles; do
    if [[ $mode == "local" ]]; then   
       cmd=$cmd0
    elif [[ $mode == "cluster" ]]; then
-      cmd="echo 'cd \$PBS_O_WORKDIR; module load bowtie/1.1.0; module load samtools/1.3.1; module load Vienna/2.2.5; $cmd0' | qsub -V -N bowtieSS -l nodes=$nodes:ppn=$ppn,mem=$mem,vmem=$mem"
+      cmd="echo 'cd \$PBS_O_WORKDIR; module load ShortStack; module load bowtie/1.1.0; module load samtools/1.3.1; module load Vienna/2.2.5; $cmd0' | qsub -V -N bowtieSS -l nodes=$nodes:ppn=$ppn,mem=$mem,vmem=$mem"
    fi
    echo "running: $cmd"
    eval "date; $cmd"
