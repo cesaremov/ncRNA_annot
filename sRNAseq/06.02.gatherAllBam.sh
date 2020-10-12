@@ -38,36 +38,48 @@ inPatt=".bam"
 
 # Check preproc
 numFastq=`find $bit/Raw/ -name "*fastq.gz" | wc -l`
-while [[ `find $inPath -name "*$inPatt" | wc -l` -ne `find $inPath -name "*log.txt" | wc -l` ]] || [[ `find $inPath -name "*log.txt" | wc -l` -lt $numFastq ]]; do
+while [[ `find $inPath -name "*$inPatt" | wc -l` -ne `find $inPath -name "*log" | wc -l` ]] || [[ `find $inPath -name "*log" | wc -l` -lt $numFastq ]]; do
 
    echo -ne "\rPreproc not finished, waiting..."
    sleep 3
 
 done
 
-# Cluster parameters
-nodes=1
-ppn=4
-mem="40G"
+# Cluster params
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=8
+qos="ipicyt"
 
 # File to process
 bamFiles=`find $inPath -name "*$inPatt"`
 
+# Set logFile
+logFile="$outPath/gatherAllBam.log"
+if [[ -e $logFile ]]; then
+  echo "$logFile already exists, exiting..." 
+  exit
+fi
+
+
 # Concat files
 echo "Concat files"
-echo "test"
 echo $bamFiles
-echo "test"
-cmd0="samtools merge --threads $ppn $outPath/all.0$inPatt `echo $bamFiles`;
-      samtools view -F4 -h --threads $ppn $outPath/all.0$inPatt | samtools view -Sb - > $outPath/all$inPatt;
+cmd0="samtools merge --threads $n $outPath/all.0$inPatt `echo $bamFiles`;
+      samtools view -F4 -h --threads $n $outPath/all.0$inPatt | samtools view -Sb - > $outPath/all$inPatt;
       samtools index -b $outPath/all.bam $outPath/all$inPatt.bai;
-      rm $outPath/all.0$inPatt && echo OK > $outPath/log.txt"
+      rm $outPath/all.0$inPatt && echo OK > $logFile"
+
 if [[ $mode == "local" ]]; then
    cmd=$cmd0 
 elif [[ $mode == "cluster" ]]; then
-  cmd="echo 'cd \$PBS_O_WORKDIR; module load samtools/1.3.1; $cmd0' | qsub -N samtools -l nodes=$nodes:ppn=$ppn,mem=$mem,vmem=$mem -V" 
+   cmd="echo -e '#!/bin/bash \n $cmd0' | \
+            sbatch -J $J -p $p -N $N --ntasks-per-node=$n --qos=$qos -o $logFile && touch $logFile"
 fi
-echo "running: $cmd"
-eval "date; $cmd"   
+
+# Run
+echo "Running: $cmd"
+eval "date && $cmd"   
 
 

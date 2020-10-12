@@ -34,7 +34,7 @@ outPath="$bit/Raw"
 mkdir -p $outPath
 
 # Files to re-name
-inFiles=`find $inPath -name '*fastq.gz'` # a-iregex ".+fastq$|.+fq$|.+sanfastq$|.+fastq.gz$|.+fq.gz$|.+sanfastq.gz$"`
+inFiles=`find $inPath/ -name '*fastq.gz'` # a-iregex ".+fastq$|.+fq$|.+sanfastq$|.+fastq.gz$|.+fq.gz$|.+sanfastq.gz$"`
 echo $inFiles
 for inFile in $inFiles; do 
  

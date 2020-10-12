@@ -37,7 +37,7 @@ inPatt=".bam"
 
 # Check preproc
 numFastq=`find $bit/Raw/ -name "*fastq.gz" | wc -l`
-while [[ `find $inPath -name "*$inPatt" | wc -l` -ne `find $inPath -name "*log.txt" | wc -l` ]] || [[ `find $inPath -name "*log.txt" | wc -l` -lt $numFastq ]]; do
+while [[ `find $inPath -name "*$inPatt" | wc -l` -ne `find $inPath -name "*log" | wc -l` ]] || [[ `find $inPath -name "*log" | wc -l` -lt $numFastq ]]; do
 
    echo -ne "\rPreproc not finished, waiting..."
    sleep 1
@@ -45,9 +45,11 @@ while [[ `find $inPath -name "*$inPatt" | wc -l` -ne `find $inPath -name "*log.t
 done
 
 # Cluster params
-nodes=1
-ppn=4
-mem="10G"
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=8
+qos="ipicyt"
 
 # Bam files
 bamFiles=`find $inPath -name "*$inPatt"`
@@ -62,16 +64,26 @@ for inFile in $bamFiles; do
 
    mkdir -p $outPathBit
 
+      # Get logFile
+   logFile="$outFile.log"
+
+   if [[ -f $logFile ]]; then
+      echo -e "$logFile already exists, continue...\n"
+      continue
+   fi   
+
    # Filter out reads by XZ tag
-   echo "Filtering out" 
-   cmd0="samtools view -h --threads $ppn $inFile | grep -v $'XZ:f:0\t' | samtools view --threads $ppn -Sb - > $outFile && echo OK > ${outFile/$inPatt/}.log.txt"
+   cmd0="samtools view -h --threads $n $inFile | grep -v $'XZ:f:0\t' | samtools view --threads $n -Sb - > $outFile && echo OK > $logFile"
    if [[ $mode == "local" ]]; then
       cmd=$cmd0 
    elif [[ $mode == "cluster" ]]; then
-     cmd="echo 'cd \$PBS_O_WORKDIR; module load samtools/1.3.1; $cmd0' | qsub -N filter-bowtie -l nodes=1:ppn=1,mem=$mem,vmem=$mem -V"
+      cmd="echo -e '#!/bin/bash \n $cmd0' | \
+            sbatch -J $J -p $p -N $N --ntasks-per-node=$n --qos=$qos -o $logFile && touch $logFile"
    fi
-   echo "running: $cmd"
-   eval "date; $cmd"
+   
+   # Run
+   echo -e "Running: $cmd\n"
+   eval "date && $cmd"
 
 done
 

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-cp 00.Homology.sh ~/bin
-cp 00.sRNAseq.sh ~/bin
-cp Homology/*sh ~/bin
-cp sRNAseq/*sh ~/bin
+ln -sf $PWD/00.Homology.sh ~/bin/
+ln -sf $PWD/00.sRNAseq.sh ~/bin/
+ln -sf $PWD/Homology/*sh ~/bin
+ln -sf $PWD/sRNAseq/*sh ~/bin
 
 

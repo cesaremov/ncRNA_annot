@@ -61,15 +61,25 @@ base="$outPath/$base0"
 # Mature sequences
 mature="`dirname $mature0 | cd | pwd`/$mature0"
 
-# Set cluste params
-nodes=1
-ppn=1
-mem="10G"
-vmem=$mem
+# Cluster params
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=32
+qos="ipicyt"
 
 # Create links from MapMi to genomesPath
 echo "Cleanning previous MapMi results"
 rm -rf $mapmiPath/RawData/Others
+
+
+# Get logFile
+logFile="$outPath/mapmi.log"
+
+if [[ -f $logFile ]]; then
+   echo -e "$logFile already exists, exiting...\n"
+   exit
+fi 
 
 # Set up
 echo "Setting up"
@@ -96,10 +106,13 @@ cmd0="perl MapMi-MainPipeline-v159-b32.pl --queryFile $mature --outputPrefix $ba
 if [[ $mode == "local" ]]; then
    cmd=$cmd0
 elif [[ $mode == "cluster" ]]; then
-   cmd="echo 'cd \$PBS_O_WORKDIR; $cmd0' | qsub -V -N MapMi -l nodes=$nodes:ppn=$ppn,mem=$mem,vmem=$vmem"
+   cmd="echo -e '#!/bin/bash \n $cmd0' | \
+        sbatch -J $J -p $p -N $N --ntasks-per-node=$n --qos=$qos -o $logFile && touch $logFile"
 fi
-echo "running: $cmd"
-eval $cmd
+
+# Run
+echo -e "Running: $cmd\n"
+eval "date && $cmd"
 
 
 

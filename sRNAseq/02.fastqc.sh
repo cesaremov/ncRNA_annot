@@ -35,12 +35,14 @@ mkdir -p $outPath
 #mkdir -p $logPath
 
 # Patts
-#inExt=".fastq.gz"
+inExt=".fastq.gz"
 
 # Cluster params
-nodes=1
-ppn=1
-mem="20G"
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=1
+qos="ipicyt"
 
 # FastQC parameters
 params="-o $outPath --extract -f fastq -t 4"   #--contaminants contaminant_list.txt"
@@ -53,27 +55,34 @@ for inFile in $inFiles; do
     echo $inFile
 
    # logFile for each inFile
-   base="`echo $inFile | sed 's/^.+\/|$inExt//'`.log"
-   logFile="$logPath/base.log"
-   
-   echo $logFile
+   base=$(basename $inFile $inExt)
+   logFile="$outPath/$base.log"
+   echo $logFile   
+
+   if [[ -f $logFile ]]; then
+      echo -e "$logFile already exists, continue...\n"
+      continue
+   fi 
    
    # FastQC
    echo "FastQC"
-   cmd0="fastqc $params $inFile"
+   cmd0="fastqc $params $inFile > $logFile"
    if [[ $mode == "local" ]]; then
       cmd=$cmd0 
    elif [[ $mode == "cluster" ]]; then
-      cmd="echo 'cd \$PBS_O_WORKDIR; module load FastQC/0.11.2; $cmd0' | qsub -N FastQC -l nodes=1:ppn=1,mem=$mem,vmem=$mem -V"
+      cmd="echo -e '#!/bin/bash \n $cmd0' | \
+           sbatch -J $J -p $p -N $N --ntasks-per-node $n --qos=$qos -o $logFile && touch $logFile"
    fi
-   echo "running: $cmd"
-   eval "date; $cmd"
+
+   # Run
+   echo "Running: $cmd"
+   eval "date && $cmd"
 
 done
 
 # MultiQC if available
 if which multiqc > /dev/null; then
-   echo "MultiQC procedding"
+   echo "MultiQC processing"
    multiqc $outPath -o ./ncRNA/multiqc
 fi
 

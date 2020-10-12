@@ -44,20 +44,22 @@ outPatt=".fq.gz"
 
 # Check preproc
 numFastq=`find $bit/Raw/ -name "*fastq.gz" | wc -l`
-while [[ `find $inPath -name "*$inPatt" | wc -l` -ne `find $inPath -name "*log.txt" | wc -l` ]] || [[ `find $inPath -name "*log.txt" | wc -l` -lt $numFastq ]]; do
+while [[ `find $inPath -name "*$inPatt" | wc -l` -ne `find $inPath -name "*log" | wc -l` ]] || [[ `find $inPath -name "*log" | wc -l` -lt $numFastq ]]; do
 
-   echo "Preproc not finished, waiting..."
+   echo -ne "\rPreproc not finished, waiting..."
    sleep 3
 
 done
 
-# Cluster parameters
-nodes=1
-ppn=1
-mem="10G"
+# Cluster params
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=1
+qos="ipicyt"
 
 # Files to process
-inFiles=`find $inPath -name "*$inPatt"`
+inFiles=`find $inPath/ -name "*$inPatt"`
 
 for inFile in $inFiles; do
 
@@ -67,16 +69,27 @@ for inFile in $inFiles; do
    base0=`basename $file0`
    base=${base0/\./_}
 
+   # Get logFile
+   logFile="$outPath/$base.pullseq.log"
+
+   if [[ -f $logFile ]]; then
+      echo -e "$logFile already exists, continue...\n"
+      continue
+   fi
+
    # Execute pullseq to filter out reads
-   echo "pullseq"
-   cmd0="pullseq -i $inFile -m $lower -a $upper | gzip -c - > $outPath/$base$outPatt && echo OK > $outPath/$base.log.txt"
+   cmd0="pullseq -i $inFile -m $lower -a $upper | gzip -c - > $outPath/$base$outPatt && echo OK > $logFile"
    if [[ $mode == "local" ]]; then
       cmd=$cmd0
    elif [[ $mode == "cluster" ]]; then
-      cmd="echo 'cd \$PBS_O_WORKDIR; module load pullseq/1.0.2; $cmd0' | qsub -N pullseq -l nodes=$nodes:ppn=$ppn,mem=$mem,vmem=$mem"
+      cmd="echo -e '#!/bin/bash \n $cmd0' | \
+            sbatch -J $J -p $p -N $N --ntasks-per-node=$n --qos=$qos -o $logFile && touch $logFile"
+
    fi
-   echo "running: $cmd"   
-   eval "date; $cmd"
+
+   # Run
+   echo "Running: $cmd"   
+   eval "date && $cmd"
 
 done
 

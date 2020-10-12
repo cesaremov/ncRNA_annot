@@ -43,17 +43,39 @@ mkdir -p $outPath
 # Patts
 inPatt=".fa"
 
+
+# Cluster params
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=1
+qos="ipicyt"
+
+
 # Setting up base name
 base=${base//./_}
+
+# Check if already processed
+if [[ -f $outPath/log.txt ]]; then
+   echo -e "split_genome $outPath/log.txt already exists, exiting...\n"
+   exit
+fi
 
 # Split genome fastq
 echo "Spliting fasta"    
 cmd0="splitMfasta.pl --minsize=$minsize --outputpath=$outPath $inPath/$base.fa && echo 'OK' > $outPath/log.txt"
+
+# Set logFile
+logFile="$outPath/$(basename $outPath).log"
+
 if [[ $mode == "local" ]]; then
    cmd="$cmd0"
 elif [[ $mode == "cluster" ]]; then
-  cmd="echo 'cd \$PBS_O_WORKDIR; $cmd0' | qsub -V -N splitGenome" 
+   cmd="echo -e '#!/bin/bash \n $cmd0' | \
+            sbatch -J $J -p $p -N $N -n $n --qos=$qos -o $logFile && touch $logFile"
 fi
+
+# Run
 echo "running: $cmd"
 eval $cmd
    

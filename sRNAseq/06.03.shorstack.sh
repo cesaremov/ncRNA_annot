@@ -52,7 +52,7 @@ rm -rf $outPath
 inPatt=".bam"
 
 # Cheack gathering preproc
-while [[ ! -e $inPathAlign/log.txt ]]; do
+while [[ ! -e $inPathAlign/gatherAllBam.log ]]; do
 
    echo -ne "\rGathering has not finished, waiting..."
    sleep 3
@@ -63,11 +63,11 @@ done
 base="${base//./_}"
 
 # Cluster params
-nodes=1
-ppn=1
-mem="20G"
-vmem=$mem
-walltime="6720:00:00"
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=32
+qos="ipicyt"
 
 # ShortStack line
 ssLine="ShortStack --genomefile $inPathGenomes/$base.fa --dicermin $dicermin --dicermax $dicermax --mincov $mincov --pad $pad"
@@ -78,18 +78,28 @@ inFiles=`ls $inPathAlign/all$inPatt`
 for bamFile in $inFiles; do
 
    echo $bamFile
-   
+
+   # Get logFile
+   logFile="Log.txt" #"$outPath/$(basename $bamFile .bam).log"
+
+   if [[ -f $logFile ]]; then
+      echo -e "$logFile already exists, continue...\n"
+      continue
+   fi  
 
    # ShortStack processing
    echo "ShortStack"
-   cmd0="$ssLine --bamfile $bamFile --outdir $outPath"
+   cmd0="$ssLine --bamfile $bamFile --outdir $outPath"  # && touch $logFile"
    if [[ $mode == "local" ]]; then
       cmd=$cmd0 
    elif [[ $mode == "cluster" ]]; then
-     cmd="echo 'cd \$PBS_O_WORKDIR; module load bowtie/1.1.0; module load samtools/1.3.1; module load Vienna/2.2.5; $cmd0' | qsub -N ShortStack -l nodes=1:ppn=1,mem=$mem,vmem=$mem,walltime=$walltime -V"
+      cmd="echo -e '#!/bin/bash \n $cmd0' | \
+            sbatch -J $J -p $p -N $N --ntasks-per-node=$n --qos=$qos" # -o $logFile" #&& touch $logFile" 
    fi 
-   echo "running: $cmd"
-   eval "date; $cmd"
+   
+   # Run
+   echo -e "Running: $cmd\n"
+   eval "date && $cmd"
 
 done
 

@@ -44,17 +44,21 @@ outExt=".fa.gz"
 
 # Check preproc
 numFastq=`find $bit/Raw/ -name "*fastq.gz" | wc -l`
-while [[ `find $inPath -name "*$inExt" | wc -l` -ne `find $inPath -name "*log.txt" | wc -l` ]] || [[ `find $inPath -name "*log.txt" | wc -l` -lt $numFastq ]]; do
+while [[ `find $inPath -name "*$inExt" | wc -l` -ne `find $inPath -name "*log" | wc -l` ]] || [[ `find $inPath -name "*log" | wc -l` -lt $numFastq ]]; do
 
    echo -ne "\rPreproc not finished, waiting..."
    sleep 1
 
 done
 
-# Cluster resources
-nodes=1
-ppn=1
-mem="10G"
+
+
+# Cluster params
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=32
+qos="ipicyt"
 
 # Tally parameters
 format='">seq_%I_w%L_x%C%n%R%n"'
@@ -69,18 +73,29 @@ for inFile in $inFiles; do
  
    outBase=${inFile%%$inExt}
    outBase=${outBase/$inPath/$outPath}
-   echo $outBase
+   
+   # Get logFile
+   logFile="$outBase.tally.log"
+
+   if [[ -f $logFile ]]; then
+      echo -e "$logFile already exists, continue...\n"
+      continue
+   fi
 
    # Tally 
    echo "Tally"
-   cmd0="tally -i $inFile -o $outBase$outExt -sumstat $outBase.sumstat $params && echo OK > $outBase.log.txt"
+   cmd0="tally -i $inFile -o $outBase$outExt -sumstat $outBase.sumstat $params && echo OK > $logFile"
    if [[ $mode == "local" ]]; then
       cmd=$cmd0
    elif [[ $mode == "cluster" ]]; then
-      cmd="echo 'cd \$PBS_O_WORKDIR; $cmd0' | qsub -V -N Tally -l nodes=$nodes:ppn=$ppn,mem=$mem,vmem=$mem "
-   fi 
-   echo "running: $cmd"
-   eval $cmd
+      cmd="echo -e '#!/bin/bash \n $cmd0' | \
+           sbatch -J $J -p $p -N $N --ntasks-per-node=$n --qos=$qos -o $logFile && touch $logFile"
+   
+   fi
+   
+   # Run 
+   echo "Running: $cmd"
+   eval "date && $cmd"
    
 done
 

@@ -38,11 +38,12 @@ outPath="$bit/reaper"
 
 mkdir -p $outPath
 
-# Cluster parameters
-mem="10G"
-vmem=$mem
-nodes=1
-ppn=1
+# Cluster params
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=32
+qos="ipicyt"
 
 # Reaper parameters
 params="-geom no-bc -3pa $pa -3p-global 12/2/1 -3p-prefix 8/2/1 -3p-head-to-tail 1 -nnn-check 3/5 -dust-suffix 20 -polya 5 -qqq-check 35/10 -tabu $tabu -mr-tabu 14/2/1"
@@ -60,18 +61,27 @@ for inFile in $inFiles; do
    base=`basename $inFile`
    base=${base/.*/}
 
-   echo $base
+   # Get logFile
+   logFile="$outPath/$base.log"
+
+   if [[ -f $logFile ]]; then
+      echo -e "$logFile already exists, continue...\n"
+      continue
+   fi  
 
    # Reaper reads
    echo "Reaper"
-   cmd0="reaper -i $inFile -basename $outPath/$base $params && echo 'OK' > $outPath/$base.log.txt"
+   cmd0="reaper -i $inFile -basename $outPath/$base $params && echo 'OK' &> $logFile"
    if [[ $mode == "local" ]]; then
       cmd=$cmd0
    elif [[ $mode == "cluster" ]]; then
-      cmd="echo 'cd \$PBS_O_WORKDIR; $cmd0' | qsub -V -N Reaper -l nodes=$nodes:ppn=$ppn,mem=$mem,vmem=$mem" 
+      cmd="echo -e '#!/bin/bash \n $cmd0' | \
+            sbatch -J $J -p $p -N $N --ntasks-per-node=$n --qos=$qos -o $logFile && touch $logFile"
    fi
-   echo "running: $cmd"
-   eval $cmd  
+   
+   # Run
+   echo "Running: $cmd"
+   eval "date && $cmd"  
 
 done
 

@@ -90,3 +90,9 @@ echo "running: $cmd"
 eval "date; $cmd"
 
 
+# Clean 
+rm -rf *cf
+rm -rf temp*
+
+
+

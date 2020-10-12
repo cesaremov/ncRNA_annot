@@ -52,7 +52,7 @@ mkdir -p $outPath
 patt=".fa.gz"
 
 # Cheack tally preproc
-while [[ ! `find $inPath -name "*$patt" | wc -l` == `find $inPath -name "*log.txt" | wc -l` ]]; do
+while [[ ! `find $inPath -name "*$patt" | wc -l` == `find $inPath -name "*log" | wc -l` ]]; do
 
    echo -ne "\rTally has not finished, waiting..."
    sleep 3
@@ -82,30 +82,46 @@ cat $inPath/*$patt | gzip -dc - > $allBase.0.fa
 sed 's/\./_/g' $allBase.0.fa > $allBase.fa
 rm $allBase.0.fa
 
-# Cluster parameters
-nodes=1
-ppn=4
-mem="25G"
-walltime="6720:00:00"
+
+# Cluster params
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=32
+qos="ipicyt"
 
 # Change to miRDeep2 pathh
 cd $outPath
 
+
+# Get logFile
+logFile="miRDeep.log"
+
+if [[ -f $logFile ]]; then
+   echo -e "$logFile already exists, exiting...\n"
+   exit
+fi   
+
+
 # Map to the genome
 echo "Mapping"
 grepPatt='"provisional id|yes\t|no\t"'
-cmd0="mapper.pl ../../$allBase.fa -c -j -l 18 -m -o $ppn -p ../../$genome -q -s ../../${allBase}_collapsed.fa -t ../../$allBase.arf && miRDeep2.pl ../../${allBase}_collapsed.fa ../../$genome.fa ../../$allBase.arf ./$mature0.miRDeep2 none none -a $mincov -g 500 -v;
+cmd0="mapper.pl ../../$allBase.fa -c -j -l 18 -m -o $n -p ../../$genome -q -s ../../${allBase}_collapsed.fa -t ../../$allBase.arf && miRDeep2.pl ../../${allBase}_collapsed.fa ../../$genome.fa ../../$allBase.arf ./$mature0.miRDeep2 none none -a $mincov -g 500 -v;
       cat result*.csv | grep -E $grepPatt > Results.txt;
       cp result*.bed miRDeep.bed" 
 if [[ $mode == "local" ]]; then
    cmd=$cmd0 
 elif [[ $mode == "cluster" ]]; then
-  cmd="echo 'cd \$PBS_O_WORKDIR; module load samtools/1.3.1; module load bowtie/1.1.0; module load miRDeep2/2.0.0.8; $cmd0' | qsub -N miRDeep2 -l nodes=$nodes:ppn=$ppn,mem=$mem,vmem=$mem,walltime=$walltime"
+   cmd="echo -e '#!/bin/bash \n $cmd0' | \
+        sbatch -J $J -p $p -N $N -n $n --qos=$qos -o $logFile && touch $logFile"
+
 else
    usage
 fi
-echo "running: $cmd"
-eval "date; $cmd"
+
+# Run
+echo "Running: $cmd"
+eval "date && $cmd"
 
 #cat result*.csv | grep -E 'provisional id|yes\t|no\t' > ./Results.txt
 

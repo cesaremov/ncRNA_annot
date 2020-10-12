@@ -42,9 +42,11 @@ while [[ ! -e $inPath/log.txt ]]; do
 done
 
 # Cluster parameters
-nodes=1
-ppn=1
-mem="20G"
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=32
+qos="ipicyt"
 
 # Files to process
 inFiles="`ls -r $inPath/*$inPatt`"
@@ -54,15 +56,24 @@ for inFile in $inFiles; do
    echo $inFile
 
    # Get name
-   name=${inFile/$inPatt/}
+   name="${inFile/$inPatt/}.rnammer.gff"
+
+   # Get logFile
+   logFile="$name.log"
+
+    if [[ -f $logFile ]]; then
+      echo -e "$logFile already exists, continue...\n"
+      continue
+   fi
    
    # Run RNAmmer
    echo "RNAmmer"
-   cmd0="~/bin/rnammer -S euk -multi -m tsu,lsu,ssu -gff $name.rnammer.gff < $inFile"
+   cmd0="~/bin/rnammer -S euk -multi -m tsu,lsu,ssu -gff $name < $inFile"
    if [[ $mode == "local" ]]; then
       cmd="$cmd0"
    elif [[ $mode == "cluster" ]]; then
-     cmd="echo 'cd \$PBS_O_WORKDIR; $cmd0' | qsub -V -N RNAmmer -l nodes=$nodes:ppn=$ppn,mem=$mem,vmem=$mem" 
+      cmd="echo -e '#!/bin/bash \n $cmd0' | \
+            sbatch -J $J -p $p -N $N --ntasks-per-node=$n --qos=$qos -o $logFile && touch $logFile"
    fi
    echo "running: $cmd"
    eval $cmd

@@ -47,13 +47,14 @@ while [[ ! -e $inPath/log.txt ]]; do
 done
 
 # Cluster parameters
-nodes=1
-ppn=10
-mem="20G"
-walltime="1200:00:00"
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=32
+qos="ipicyt"
 
 # cmsearch rfam instruction
-prog="cmsearch --rfam --cpu $ppn --tblout"
+prog="cmsearch --noali --rfam --cpu $n --tblout"
 
 # Files to process
 inFiles="`ls -r $inPath/*$inPatt`"
@@ -69,17 +70,27 @@ for inFile in $inFiles; do
    # Get outFile name
    outFile=${inFile/$inPatt/.rfam}
 
+   # Get logFile names
+   logFile="$outFile.log"
+
+   if [[ -f $logFile ]]; then
+      echo -e "$logFile already exists, continue...\n"
+      continue
+   fi
+
    # Infernal search, cmsearch 
-   echo "CMsearch"
    cmd0="$prog $outFile $rfam $inFile" 
    if [[ $mode == "local" ]]; then
       cmd="$cmd0" 
    elif [[ $mode == "cluster" ]]; then
-      cmd="echo 'cd \$PBS_O_WORKDIR; module load infernal/1.1.1; $cmd0' | \
-            qsub -N CMsearch -l nodes=$nodes:ppn=$ppn,mem=$mem,vmem=$mem,walltime=$walltime -V -j oe -o $logPath/$name.log"
+      cmd="echo -e '#!/bin/bash \n $cmd0' | \
+            sbatch -J $J -p $p -N $N --ntasks-per-node=$n --qos=$qos -o $logFile && touch $logFile"
+   
    fi
-   echo "running: $cmd"
-   eval $cmd
+
+   # Run
+   echo -e "Running: $cmd\n"
+   eval "date && $cmd"
  
 done
  

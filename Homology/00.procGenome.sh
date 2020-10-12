@@ -55,20 +55,35 @@ if [[ $genome =~ \.gz$ ]]; then
 fi
  
 # Cluster parameters
-nodes=1
-ppn=1
-mem="10G"
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=32
+qos="ipicyt"
   
+# Check if already processed
+if [[ -f $outPath/log.txt ]]; then
+   echo -e "bowtie-build $outPath/log.txt index already generated, exiting...\n"
+   exit
+fi
+
+# Set logFile
+logFile="$outPath/$(basename $outPath).log"
+
 # Bowtie index
 echo "Creating bowtie index"
 cmd0="bowtie-build $outPath/$base.fa $outPath/$base; bowtie-inspect -s $outPath/$base | grep '^Seq' | cut -f 2,3 > $outPath/$base.chrlens && echo 'OK' > $outPath/log.txt"
+
 if [[ $mode == "local" ]]; then
    cmd="$cmd0"
 elif [[ $mode == "cluster" ]]; then
-  cmd="echo 'module load bowtie/1.1.0; cd \$PBS_O_WORKDIR; $cmd0' | qsub -V -l nodes=$nodes:ppn=$ppn,mem=$mem,vmem=$mem -N bowtie-build.$base" 
+   cmd="echo -e '#!/bin/bash \n $cmd0' | \
+            sbatch -J $J -p $p -N $N -n $n --qos=$qos -o $logFile && touch $logFile"
 fi
-echo "running: $cmd"
-eval "date; $cmd"
+
+# Run
+echo -e "Running: $cmd\n"
+eval "date && $cmd"
 
 # Blast database
 #echo "Creating blast database"

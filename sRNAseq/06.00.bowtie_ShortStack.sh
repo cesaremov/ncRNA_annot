@@ -40,9 +40,9 @@ inPatt=".fq.gz"
 
 # Check preproc
 numFastq=`find $bit/Raw/ -name "*fastq.gz" | wc -l`
-while [[ ! -e $bit/Genome/log.txt || `find $inPath -name "*$inPatt" | wc -l` -ne `find $inPath -name "*log.txt" | wc -l` || `find $inPath -name "*log.txt" | wc -l` -lt $numFastq ]]; do
+while [[ ! -e $bit/Genome/log.txt || `find $inPath -name "*$inPatt" | wc -l` -ne `find $inPath -name "*log" | wc -l` || `find $inPath -name "*log" | wc -l` -lt $numFastq ]]; do
   
-   echo -ne "\rPreproc not finished, waiting..."
+   echo -ne "\rPreproc pullseq not finished, waiting..."
    sleep 1
 
 done
@@ -53,14 +53,16 @@ base="${base//./_}"
 # Genomes path
 genome="$bit/Genome"
 
-# Process parameters
-nodes=1
-ppn=6
-mem="20G"
+# Cluster params
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=32
+qos="ipicyt"
 
 # BowtieShorStack options
 k="500"
-ShortStackLine="ShortStack --bowtie_cores $ppn --nostitch --mismatches 2 --mmap u --bowtie_m $k --ranmax $k --show_secondaries"
+ShortStackLine="ShortStack --bowtie_cores $n --nostitch --mismatches 2 --mmap u --bowtie_m $k --ranmax $k --show_secondaries"
 
 # Genome info
 idxFile="$genome/$base"
@@ -77,15 +79,26 @@ for fqFile in $inFiles; do
    base="`basename $fqFile`"
    base="${base/$inPatt/}"
 
+   # Get logFile
+   logFile="$outPath/$base.bowtie_ss.log"
+
+   if [[ -f $logFile ]]; then
+      echo -e "$logFile already exists, continue...\n"
+      continue
+   fi   
+
    # Bowtie
    echo "Mapping"
-   cmd0="rm -rf $outPath/$base; $ShortStackLine --readfile $fqFile --genomefile $idxFile.fa --outdir $outPath/$base --align_only && echo 'OK' > $outPath/$base/$base.log.txt"
+   cmd0="rm -rf $outPath/$base; $ShortStackLine --readfile $fqFile --genomefile $idxFile.fa --outdir $outPath/$base --align_only && echo 'OK' > $logFile"
    if [[ $mode == "local" ]]; then   
       cmd=$cmd0
    elif [[ $mode == "cluster" ]]; then
-      cmd="echo 'cd \$PBS_O_WORKDIR; module load ShortStack; module load bowtie/1.1.0; module load samtools/1.3.1; module load Vienna/2.2.5; $cmd0' | qsub -V -N bowtieSS -l nodes=$nodes:ppn=$ppn,mem=$mem,vmem=$mem"
+      cmd="echo -e '#!/bin/bash \n $cmd0' | \
+            sbatch -J $J -p $p -N $N --ntasks-per-node=$n --qos=$qos -o $logFile && touch $logFile"
    fi
-   echo "running: $cmd"
+
+   # Run
+   echo -e "Running: $cmd\n"
    eval "date; $cmd"
          
  done

@@ -44,25 +44,38 @@ done
 inFiles="`ls -r $inPath/*$inPatt`"
 
 # Cluster parameters
-nodes=1
-ppn=4
-mem="50G"
+J=$(basename $0 .sh)
+p="computes_standard"
+N=1
+n=16
+qos="ipicyt"
 
 # Process
 for inFile in $inFiles; do
    
    echo $inFile
 
+    # Get logFile names
+    logFile="$inFile.repeatmasker.log"
+
+   if [[ -f $logFile ]]; then
+      echo -e "$logFile already exists, continue...\n"
+      continue
+   fi
+
    # RepeatMasker
-   echo "RepeatMasker"
-   cmd0="RepeatMasker -gff -pa $ppn -s -species elegans -dir `dirname $inFile` $inFile"
+   cmd0="RepeatMasker -e hmmer -gff -pa $n -s -dir $(dirname $inFile) $inFile" # -species
    if [[ $mode == "local" ]]; then 
       cmd=$cmd0
    elif [[ $mode == "cluster" ]]; then
-      cmd="echo 'cd \$PBS_O_WORKDIR; module load RepeatMasker/4.0; $cmd0' | qsub -N RepeatMasker -l nodes=1:ppn=$ppn,mem=$mem,vmem=$mem"
+   cmd="echo -e '#!/bin/bash \n $cmd0' | \
+            sbatch -J $J -p $p -N $N --ntasks-per-node=$n --qos=$qos -o $logFile && touch $logFile"
+
    fi
-   echo "running: $cmd"
-   eval "date; $cmd"
+
+   # Run
+   echo "Running: $cmd"
+   eval "date && $cmd"
 
 done
 
