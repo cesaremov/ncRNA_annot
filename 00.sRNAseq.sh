@@ -62,61 +62,61 @@ done
 # Links to files (no dots in linknames)
 echo "Setting up fastq file"
 cmd="01.rename_link_files.sh -i $fastqPath"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # FastQC quality analysis
 echo "FastQC analysis"
 cmd="02.fastqc.sh -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # Reaper reads
 echo "Reaper reads"
 cmd="03.reaper.sh -a $adapter -t $tabu -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # Tally sequences
 echo "Tally sequences" 
 cmd="04.tally.sh -l $lower -u $upper -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # Filter out reads by length
 echo "Filtering by length"
 cmd="05.pullseq.sh -l $lower -u $upper -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # Align to genome (ShortStack bowtie alignment)
 echo "Align to genome"
 cmd="06.00.bowtie_ShortStack.sh -b $base -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # Filter out bowtie results
 echo "Filtering alignemt results"
 cmd="06.01.filter_bowtie.sh -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # Gather filtered bowtie results
 echo "Gather alignment results"
 cmd="06.02.gatherAllBam.sh -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # ShortStack analysis
 echo "ShortStack"
 cmd="06.03.shorstack.sh -b $base --dicermin $dicermin --dicermax $dicermax --mincov $mincov --pad $pad -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # miRDeep2 analysis
 echo "miRDeep2"
 cmd="07.miRDeep2.sh -b $base -M $mature --mincov $mincov -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 

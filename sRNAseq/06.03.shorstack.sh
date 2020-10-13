@@ -52,7 +52,7 @@ rm -rf $outPath
 inPatt=".bam"
 
 # Cheack gathering preproc
-while [[ ! -e $inPathAlign/gatherAllBam.log ]]; do
+while [[ ! -e $inPathAlign/gatherAllBam.log || $(cat $inPathAlign/gatherAllBam.log) != "OK" ]]; do
 
    echo -ne "\rGathering has not finished, waiting..."
    sleep 3

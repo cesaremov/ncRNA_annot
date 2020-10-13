@@ -57,7 +57,7 @@ done
 J=$(basename $0 .sh)
 p="computes_standard"
 N=1
-n=32
+n=1
 qos="ipicyt"
 
 # Tally parameters

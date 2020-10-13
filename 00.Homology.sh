@@ -50,43 +50,43 @@ done
 # Processing Genome
 echo "Setting up and processing Genome information"
 cmd="00.procGenome.sh -g $genome -b $base -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # Split genome
 echo "Splitting genome"
 cmd="01.split_genome.sh -b $base -m $minsize --mode $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # Rfam
 echo "Infernal-Rfam"
 cmd="02.cmsearch_Rfam.sh -r $rfam -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # tRNAscan-SE
 echo "tRNAscan-SE"
 cmd="03.tRNAscan.sh -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # RNAmmer
 echo "RNAmmer"
 cmd="04.RNAmmer.sh -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # MapMi
 echo "MapMi"
 cmd="05.MapMi.sh -b $base --mapmiPath $mapmiPath -M $mature -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 # RepeatMasker
 echo "RepeatMasker"
 cmd="07.RepeatMasker.sh -m $mode"
-echo "running: $cmd"
+echo "Running: $cmd"
 eval "date; $cmd"
 
 
