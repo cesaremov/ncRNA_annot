@@ -64,7 +64,7 @@ fi
 # Split genome fastq
 echo "Spliting fasta"    
 cmd0="splitMfasta.pl --minsize=$minsize --outputpath=$outPath $inPath/$base.fa && echo 'OK' > $outPath/log.txt"
-
+echo $cmd0
 # Set logFile
 logFile="$outPath/$(basename $outPath).log"
 
@@ -76,7 +76,7 @@ elif [[ $mode == "cluster" ]]; then
 fi
 
 # Run
-echo "running: $cmd"
+echo "Running: $cmd"
 eval $cmd
    
 

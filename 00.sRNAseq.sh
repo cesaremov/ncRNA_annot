@@ -116,7 +116,7 @@ eval "date; $cmd"
 # miRDeep2 analysis
 echo "miRDeep2"
 cmd="07.miRDeep2.sh -b $base -M $mature --mincov $mincov -m $mode"
-echo "Running: $cmd"
-eval "date; $cmd"
+#echo "Running: $cmd"
+#eval "date; $cmd"
 
 

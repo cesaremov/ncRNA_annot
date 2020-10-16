@@ -80,8 +80,8 @@ eval "date; $cmd"
 # MapMi
 echo "MapMi"
 cmd="05.MapMi.sh -b $base --mapmiPath $mapmiPath -M $mature -m $mode"
-echo "Running: $cmd"
-eval "date; $cmd"
+#echo "Running: $cmd"
+#eval "date; $cmd"
 
 # RepeatMasker
 echo "RepeatMasker"
